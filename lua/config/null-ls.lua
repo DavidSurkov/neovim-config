@@ -1,0 +1,33 @@
+-- -- lua/config/null-ls.lua
+--
+-- -- First, require null-ls
+-- local null_ls = require("null-ls")
+--
+-- -- Define your sources
+-- local sources = {
+--   -- Formatting: Prettier for JavaScript, TypeScript, etc.
+--   null_ls.builtins.formatting.prettier.with({
+--     filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "css", "html", "json", "yaml" },
+--   }),
+--   -- Diagnostics: ESLint for JavaScript, TypeScript, etc.
+--   null_ls.builtins.diagnostics.eslint.with({
+--     filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+--   }),
+-- }
+--
+-- -- Setup null-ls with the defined sources
+-- null_ls.setup({
+--   sources = sources,
+--   on_attach = function(client, bufnr)
+--     if client.supports_method("textDocument/formatting") then
+--       -- Create an autocommand to format on save
+--       vim.api.nvim_clear_autocmds({ group = vim.api.nvim_create_augroup("LspFormatting", { clear = true }), buffer =
+--       bufnr })
+--       vim.api.nvim_create_autocmd("BufWritePre", {
+--         group = vim.api.nvim_create_augroup("LspFormatting", { clear = true }),
+--         buffer = bufnr,
+--         callback = function() vim.lsp.buf.format({ async = false }) end,
+--       })
+--     end
+--   end,
+-- })
