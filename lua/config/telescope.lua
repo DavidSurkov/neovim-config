@@ -1,4 +1,15 @@
 -- config/telescope.lua: Configure Telescope and its key mappings
+local actions = require("telescope.actions")
+local action_state = require("telescope.actions.state")
+
+local function delete_buffer(prompt_bufnr)
+  local selection = action_state.get_selected_entry()
+  if not selection then return end
+  local bufnr = selection.bufnr
+  if bufnr then
+    vim.api.nvim_buf_delete(bufnr, { force = false })
+  end
+end
 
 require('telescope').setup {
   defaults = {
@@ -6,6 +17,9 @@ require('telescope').setup {
       i = {
         ['<C-u>'] = false,
         ['<C-d>'] = false,
+      },
+      n = {
+        ['dd'] = delete_buffer,
       },
     },
   },
