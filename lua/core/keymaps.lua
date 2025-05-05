@@ -16,3 +16,6 @@ vim.keymap.set('n', '<leader>tn', ':tabnext<CR>', { noremap = true, silent = tru
 vim.keymap.set('n', '<leader>tp', ':tabprevious<CR>', { noremap = true, silent = true })
 vim.keymap.set('n', '<leader>tf', ':tabfirst<CR>', { noremap = true, silent = true })
 vim.keymap.set('n', '<leader>tl', ':tablast<CR>', { noremap = true, silent = true })
+
+--Neotree
+vim.keymap.set('n', '<leader>nr', ':Neotree reveal<CR>', { desc = 'Reveal current file in Neo-tree' })
