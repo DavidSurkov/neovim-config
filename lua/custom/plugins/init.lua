@@ -14,7 +14,13 @@ return {
       "MunifTanjim/nui.nvim",
     },
     config = function()
-      require('neo-tree').setup {}
+      require('neo-tree').setup {
+        hide_root_node = true, -- Hide the root node.
+        source_selector = {
+          winbar = true,
+          statusline = true,
+        }
+      }
     end,
   },
 }
