@@ -22,7 +22,7 @@ require('lazy').setup({
     { import = 'plugins.editor.gitsigns' },
     -- { import = 'plugins.editor.grug-far' },
     { import = 'plugins.editor.lazygit' },
-    { import = 'plugins.editor.mini' },
+    -- { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.neo-tree' },
     -- { import = 'plugins.editor.overseer' },
     -- { import = 'plugins.editor.tmux' },
