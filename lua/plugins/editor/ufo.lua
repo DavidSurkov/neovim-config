@@ -55,6 +55,13 @@ return {
       vim.o.foldenable = true
 
       require('ufo').setup()
+
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'neo-tree',
+        callback = function()
+          require('ufo').detach()
+        end,
+      })
     end,
   },
 }

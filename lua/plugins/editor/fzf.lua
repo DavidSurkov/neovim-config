@@ -46,10 +46,7 @@ local get_kind_filter = function(buf)
   end
 
   ---@diagnostic disable-next-line: return-type-mismatch
-  return type(kind_filter) == 'table'
-      and type(kind_filter.default) == 'table'
-      and kind_filter.default
-    or nil
+  return type(kind_filter) == 'table' and type(kind_filter.default) == 'table' and kind_filter.default or nil
 end
 
 local symbols_filter = function(entry, ctx)
