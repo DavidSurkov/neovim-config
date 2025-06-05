@@ -20,7 +20,7 @@ require('lazy').setup({
     { import = 'plugins.dap.core' },
     { import = 'plugins.editor.fzf' },
     { import = 'plugins.editor.gitsigns' },
-    { import = 'plugins.editor.lazygit' },
+    -- { import = 'plugins.editor.lazygit' },
     { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.neo-tree' },
     { import = 'plugins.editor.overseer' },
