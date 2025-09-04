@@ -14,6 +14,14 @@ return {
           enabled = false,
         },
         vtsls = {
+          root_dir = function(fname)
+            local util = require 'lspconfig.util'
+            local root = util.root_pattern('pnpm-workspace.yaml', 'package.json', 'tsconfig.json', '.git')(fname)
+            if not root and root:find('/node_modules', 1, true) then
+              return nil
+            end
+            return root
+          end,
           -- explicitly add default filetypes, so that we can extend
           -- them in related extras
           filetypes = {
@@ -60,10 +68,10 @@ return {
                   command = 'typescript.goToSourceDefinition',
                   arguments = { position_params.textDocument.uri, position_params.position },
                 }
-                require("trouble").open({
-                  mode = "lsp_command",
+                require('trouble').open {
+                  mode = 'lsp_command',
                   params = params,
-                })
+                }
               end,
               desc = 'Goto Source Definition',
             },
@@ -74,10 +82,10 @@ return {
                   command = 'typescript.findAllFileReferences',
                   arguments = { vim.uri_from_bufnr(0) },
                 }
-                require("trouble").open({
-                  mode = "lsp_command",
+                require('trouble').open {
+                  mode = 'lsp_command',
                   params = params,
-                })
+                }
               end,
               desc = 'File References',
             },
@@ -122,10 +130,7 @@ return {
         end,
         vtsls = function(_, opts)
           local on_attach = function(client, _)
-            client.commands['_typescript.moveToFileRefactoring'] = function(
-              command,
-              _
-            )
+            client.commands['_typescript.moveToFileRefactoring'] = function(command, _)
               ---@type string, string, lsp.Range
               local action, uri, range = unpack(command.arguments)
 
@@ -175,7 +180,7 @@ return {
             end
           end
           local name = 'vtsls'
-          vim.api.nvim_create_autocmd("LspAttach", {
+          vim.api.nvim_create_autocmd('LspAttach', {
             callback = function(args)
               local buffer = args.buf ---@type number
               local client = vim.lsp.get_client_by_id(args.data.client_id)
@@ -185,12 +190,8 @@ return {
             end,
           })
           -- copy typescript settings to javascript
-          opts.settings.javascript = vim.tbl_deep_extend(
-            'force',
-            {},
-            opts.settings.typescript,
-            opts.settings.javascript or {}
-          )
+          opts.settings.javascript =
+            vim.tbl_deep_extend('force', {}, opts.settings.typescript, opts.settings.javascript or {})
         end,
       },
     },
@@ -218,10 +219,7 @@ return {
           executable = {
             command = 'node',
             args = {
-              vim.env.MASON
-                .. '/packages/'
-                .. 'js-debug-adapter'
-                .. '/js-debug/src/dapDebugServer.js',
+              vim.env.MASON .. '/packages/' .. 'js-debug-adapter' .. '/js-debug/src/dapDebugServer.js',
               '${port}',
             },
           },
@@ -241,8 +239,7 @@ return {
         end
       end
 
-      local js_filetypes =
-        { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact' }
+      local js_filetypes = { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact' }
 
       local vscode = require 'dap.ext.vscode'
       vscode.type_to_filetypes['node'] = js_filetypes

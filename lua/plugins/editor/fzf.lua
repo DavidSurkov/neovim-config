@@ -110,7 +110,20 @@ return {
         '<cmd>FzfLua diagnostics_workspace<cr>',
         desc = 'Workspace Diagnostics',
       },
-      { '<leader>sg', '<cmd>FzfLua live_grep_native<cr>', desc = 'Grep' },
+      {
+        '<leader>sg',
+        function()
+          vim.ui.input({
+            prompt = 'Dir> ',
+            default = vim.fn.getcwd(), -- or use get_git_root() if you want git root
+          }, function(input)
+            if input then
+              require('fzf-lua').live_grep_native { cwd = input }
+            end
+          end)
+        end,
+        desc = 'Grep (choose dir)',
+      },
       { '<leader>sh', '<cmd>FzfLua help_tags<cr>', desc = 'Help Pages' },
       { '<leader>sH', '<cmd>FzfLua highlights<cr>', desc = 'Highlight Groups' },
       { '<leader>sj', '<cmd>FzfLua jumps<cr>', desc = 'Jumplist' },
