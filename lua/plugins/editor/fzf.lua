@@ -60,6 +60,19 @@ local symbols_filter = function(entry, ctx)
 end
 
 local function project_search_dirs()
+  -- we expect local config to have
+  -- vim.g.project_search_dirs = {
+  -- 	{ label = "Root", cwd = vim.fn.getcwd() },
+  -- 	{ label = "Packages", cwd = vim.fn.expand("packages") },
+  -- 	{ label = "Bot", cwd = vim.fn.expand("packages/bot") },
+  -- 	{ label = "Client", cwd = vim.fn.expand("packages/client") },
+  -- 	{ label = "Core", cwd = vim.fn.expand("packages/core") },
+  -- 	{ label = "Client-common", cwd = vim.fn.expand("packages/client-common") },
+  -- 	{ label = "Node-common", cwd = vim.fn.expand("packages/node-common") },
+  -- 	{ label = "Plugin-client", cwd = vim.fn.expand("packages/jira-cloud-client") },
+  -- 	{ label = "Plugin-node", cwd = vim.fn.expand("packages/jira-cloud-node") },
+  -- 	{ label = "Connector", cwd = vim.fn.expand("packages/connector") },
+  -- }
   local dirs = vim.g.project_search_dirs
   if type(dirs) == 'function' then
     dirs = dirs()
