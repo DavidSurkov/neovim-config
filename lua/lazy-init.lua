@@ -25,7 +25,7 @@ require('lazy').setup({
     { import = 'plugins.editor.neo-tree' },
     { import = 'plugins.editor.overseer' },
     { import = 'plugins.editor.snacks' },
-    -- { import = 'plugins.editor.ufo' },
+    { import = 'plugins.editor.ufo' },
     { import = 'plugins.editor.which-key' },
     { import = 'plugins.formatting.conform' },
     { import = 'plugins.formatting.prettier' },

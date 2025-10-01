@@ -21,3 +21,5 @@ vim.opt.shiftwidth = 2
 vim.opt.softtabstop = 2
 vim.opt.expandtab = true
 vim.o.showmatch = true
+vim.o.exrc = true
+vim.o.secure = true

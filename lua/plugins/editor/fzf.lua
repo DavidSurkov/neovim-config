@@ -59,6 +59,48 @@ local symbols_filter = function(entry, ctx)
   return vim.tbl_contains(ctx.symbols_filter, entry.kind)
 end
 
+local function project_search_dirs()
+  local dirs = vim.g.project_search_dirs
+  if type(dirs) == 'function' then
+    dirs = dirs()
+  end
+  if type(dirs) ~= 'table' or vim.tbl_isempty(dirs) then
+    return nil
+  end
+  return dirs
+end
+
+local function select_search_dir()
+  local dirs = project_search_dirs()
+  if dirs then
+    vim.defer_fn(function()
+      vim.ui.select(dirs, {
+        prompt = 'Choose dir',
+        kind = 'project_search_dir',
+        format_item = function(item)
+          return type(item) == 'table' and (item.label or item.cwd) or item
+        end,
+      }, function(choice)
+        if not choice then
+          return
+        end
+        local cwd = type(choice) == 'table' and choice.cwd or choice
+        if cwd and cwd ~= '' then
+          vim.defer_fn(function()
+            require('fzf-lua').live_grep_native { cwd = cwd }
+          end, 10)
+        end
+      end)
+    end, 10)
+    return
+  end
+  vim.ui.input({ prompt = 'Dir> ', default = vim.fn.getcwd() }, function(input)
+    if input and input ~= '' then
+      require('fzf-lua').live_grep_native { cwd = input }
+    end
+  end)
+end
+
 return {
   {
     'ibhagwan/fzf-lua',
@@ -112,18 +154,24 @@ return {
       },
       {
         '<leader>sg',
-        function()
-          vim.ui.input({
-            prompt = 'Dir> ',
-            default = vim.fn.getcwd(), -- or use get_git_root() if you want git root
-          }, function(input)
-            if input then
-              require('fzf-lua').live_grep_native { cwd = input }
-            end
-          end)
-        end,
+        select_search_dir,
         desc = 'Grep (choose dir)',
       },
+
+      -- {
+      --   '<leader>sg',
+      --   function()
+      --     vim.ui.input({
+      --       prompt = 'Dir> ',
+      --       default = vim.fn.getcwd(), -- or use get_git_root() if you want git root
+      --     }, function(input)
+      --       if input then
+      --         require('fzf-lua').live_grep_native { cwd = input }
+      --       end
+      --     end)
+      --   end,
+      --   desc = 'Grep (choose dir)',
+      -- },
       { '<leader>sh', '<cmd>FzfLua help_tags<cr>', desc = 'Help Pages' },
       { '<leader>sH', '<cmd>FzfLua highlights<cr>', desc = 'Highlight Groups' },
       { '<leader>sj', '<cmd>FzfLua jumps<cr>', desc = 'Jumplist' },
