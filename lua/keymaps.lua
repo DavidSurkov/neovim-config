@@ -14,7 +14,7 @@ vim.keymap.set('n', '<leader>tf', ':tabfirst<CR>', { noremap = true, silent = tr
 vim.keymap.set('n', '<leader>tl', ':tablast<CR>', { noremap = true, silent = true })
 
 --Neotree
-vim.keymap.set('n', '<leader>nr', ':Neotree reveal<CR>', { desc = 'Reveal current file in Neo-tree' })
+-- vim.keymap.set('n', '<leader>nr', ':Neotree reveal<CR>', { desc = 'Reveal current file in Neo-tree' })
 
 --Autoformat
 -- Toggle autoformat for the current buffer
