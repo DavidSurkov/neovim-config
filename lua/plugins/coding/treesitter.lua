@@ -1,4 +1,3 @@
-
 return {
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
@@ -35,6 +34,8 @@ return {
         'vimdoc',
         'ninja',
         'rst',
+        'rust',
+        'toml',
       },
       -- Autoinstall languages that are not installed
       auto_install = true,
