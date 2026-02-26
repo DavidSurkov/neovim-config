@@ -197,6 +197,7 @@ return {
     },
   },
 
+  -- attempt to enable debugger
   {
     'mfussenegger/nvim-dap',
     optional = true,

@@ -9,8 +9,6 @@ vim.opt.rtp:prepend(vim.env.LAZY or lazypath)
 
 require('lazy').setup({
   spec = {
-    -- 'tpope/vim-sleuth',
-    { import = 'plugins.coding.codex' },
     { import = 'plugins.coding.autopairs' },
     { import = 'plugins.coding.cmp' },
     { import = 'plugins.coding.lspconfig' },
@@ -20,7 +18,6 @@ require('lazy').setup({
     { import = 'plugins.dap.core' },
     { import = 'plugins.editor.fzf' },
     { import = 'plugins.editor.gitsigns' },
-    -- { import = 'plugins.editor.lazygit' },
     { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.neo-tree' },
     { import = 'plugins.editor.overseer' },
@@ -29,21 +26,14 @@ require('lazy').setup({
     { import = 'plugins.editor.which-key' },
     { import = 'plugins.formatting.conform' },
     { import = 'plugins.formatting.prettier' },
-    -- { import = 'plugins.languages.astro' },
     { import = 'plugins.languages.docker' },
     { import = 'plugins.languages.go' },
-    -- { import = 'plugins.languages.laravel' },
     { import = 'plugins.languages.mdx' },
-    -- { import = 'plugins.languages.php' },
-    -- { import = 'plugins.languages.python' },
     { import = 'plugins.languages.tailwind' },
     { import = 'plugins.languages.typescript' },
-    -- { import = 'plugins.linting.core' },
-    -- { import = 'plugins.test.core' },
     { import = 'plugins.ui.colorscheme' },
     { import = 'plugins.ui.dressing' },
     { import = 'plugins.ui.treesitter-context' },
-    -- { import = 'plugins.util.mini-hipatterns' },
   },
   defaults = {},
   performance = {
