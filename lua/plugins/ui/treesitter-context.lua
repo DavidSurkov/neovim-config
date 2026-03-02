@@ -5,20 +5,13 @@ return {
   opts = function()
     local tsc = require 'treesitter-context'
 
-    local function toggle_treesitter_context()
+    vim.keymap.set('n', '<leader>ut', function()
       if tsc.enabled then
         tsc.disable()
       else
         tsc.enable()
       end
-    end
-
-    vim.api.nvim_set_keymap(
-      'n',
-      '<leader>ut',
-      ':lua toggle_treesitter_context()<CR>',
-      { noremap = true, silent = true }
-    )
+    end, { silent = true, desc = 'Toggle Treesitter Context' })
 
     return { mode = 'cursor', max_lines = 3 }
   end,

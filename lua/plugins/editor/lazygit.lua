@@ -1,3 +1,4 @@
+-- not used now. using snacks.nivm
 return {
   {
     'kdheepak/lazygit.nvim',
