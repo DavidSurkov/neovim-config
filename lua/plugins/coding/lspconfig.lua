@@ -87,6 +87,27 @@ return {
           --
           -- When you move your cursor, the highlights will be cleared (the second autocommand).
           local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.name == 'eslint' then
+            map('<leader>cE', function()
+              vim.lsp.buf.code_action {
+                apply = true,
+                context = {
+                  only = { 'source.fixAll.eslint' },
+                  diagnostics = {},
+                },
+              }
+            end, 'ESLint Fix All')
+            map('<leader>uE', function()
+              local bufnr = event.buf
+              if vim.lsp.buf_is_attached(bufnr, client.id) then
+                vim.lsp.buf_detach_client(bufnr, client.id)
+                vim.notify('ESLint disabled for current buffer')
+              else
+                vim.lsp.buf_attach_client(bufnr, client.id)
+                vim.notify('ESLint enabled for current buffer')
+              end
+            end, 'Toggle ESLint (Buffer)')
+          end
           -- if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
           --   local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
           --   vim.api.nvim_create_autocmd({ 'CursorHold' }, {
@@ -161,6 +182,18 @@ return {
         -- clangd = {},
         -- gopls = {},
         -- pyright = {},
+        eslint = {
+          settings = {
+            workingDirectory = {
+              mode = 'auto',
+            },
+          },
+          on_attach = function(client)
+            -- Keep Prettier as the formatter for JS/TS.
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+          end,
+        },
         rust_analyzer = {
           settings = {
             ['rust-analyzer'] = {
@@ -233,7 +266,7 @@ return {
         -- 'delve',
         'docker-compose-language-service',
         'dockerfile-language-server',
-        -- 'eslint-lsp',
+        'eslint-lsp',
         'hadolint',
         -- 'intelephense',
         'js-debug-adapter',

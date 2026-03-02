@@ -60,19 +60,6 @@ local symbols_filter = function(entry, ctx)
 end
 
 local function project_search_dirs()
-  -- we expect local config to have
-  -- vim.g.project_search_dirs = {
-  -- 	{ label = "Root", cwd = vim.fn.getcwd() },
-  -- 	{ label = "Packages", cwd = vim.fn.expand("packages") },
-  -- 	{ label = "Bot", cwd = vim.fn.expand("packages/bot") },
-  -- 	{ label = "Client", cwd = vim.fn.expand("packages/client") },
-  -- 	{ label = "Core", cwd = vim.fn.expand("packages/core") },
-  -- 	{ label = "Client-common", cwd = vim.fn.expand("packages/client-common") },
-  -- 	{ label = "Node-common", cwd = vim.fn.expand("packages/node-common") },
-  -- 	{ label = "Plugin-client", cwd = vim.fn.expand("packages/jira-cloud-client") },
-  -- 	{ label = "Plugin-node", cwd = vim.fn.expand("packages/jira-cloud-node") },
-  -- 	{ label = "Connector", cwd = vim.fn.expand("packages/connector") },
-  -- }
   local dirs = vim.g.project_search_dirs
   if type(dirs) == 'function' then
     dirs = dirs()
@@ -84,6 +71,8 @@ local function project_search_dirs()
 end
 
 local function select_search_dir()
+  -- If there is a list of preconfigured project dirs(like ones you can configure in webshtore ide)
+  -- then display them in a list and let use to pick one of them
   local dirs = project_search_dirs()
   if dirs then
     vim.defer_fn(function()
@@ -107,6 +96,7 @@ local function select_search_dir()
     end, 10)
     return
   end
+  -- Otherwise show promts that starts from cwd
   vim.ui.input({ prompt = 'Dir> ', default = vim.fn.getcwd() }, function(input)
     if input and input ~= '' then
       require('fzf-lua').live_grep_native { cwd = input }
@@ -171,20 +161,6 @@ return {
         desc = 'Grep (choose dir)',
       },
 
-      -- {
-      --   '<leader>sg',
-      --   function()
-      --     vim.ui.input({
-      --       prompt = 'Dir> ',
-      --       default = vim.fn.getcwd(), -- or use get_git_root() if you want git root
-      --     }, function(input)
-      --       if input then
-      --         require('fzf-lua').live_grep_native { cwd = input }
-      --       end
-      --     end)
-      --   end,
-      --   desc = 'Grep (choose dir)',
-      -- },
       { '<leader>sh', '<cmd>FzfLua help_tags<cr>', desc = 'Help Pages' },
       { '<leader>sH', '<cmd>FzfLua highlights<cr>', desc = 'Highlight Groups' },
       { '<leader>sj', '<cmd>FzfLua jumps<cr>', desc = 'Jumplist' },
@@ -217,14 +193,33 @@ return {
   {
     'neovim/nvim-lspconfig',
     opts = function()
-      -- stylua: ignore
-      vim.keymap.set('n', 'gd', '<cmd>FzfLua lsp_definitions     jump_to_single_result=true silent=true ignore_current_line=true<cr>', { desc = "Goto Definition" })
-      -- stylua: ignore
-      vim.keymap.set('n', 'gr', '<cmd>FzfLua lsp_references      jump_to_single_result=true silent=true ignore_current_line=true<cr>', { desc = "References", nowait = true })
-      -- stylua: ignore
-      vim.keymap.set('n', 'gI', '<cmd>FzfLua lsp_implementations jump_to_single_result=true silent=true ignore_current_line=true<cr>', { desc = "Goto Implementation" })
-      -- stylua: ignore
-      vim.keymap.set('n', 'gy', '<cmd>FzfLua lsp_typedefs        jump_to_single_result=true silent=true ignore_current_line=true<cr>', { desc = "Goto Type Definitions" })
+      vim.keymap.set(
+        'n',
+        'gd',
+        '<cmd>FzfLua lsp_definitions     jump1=true silent=true ignore_current_line=true<cr>',
+        { desc = 'Goto Definition' }
+      )
+
+      vim.keymap.set(
+        'n',
+        'gr',
+        '<cmd>FzfLua lsp_references      jump1=true silent=true ignore_current_line=true<cr>',
+        { desc = 'References', nowait = true }
+      )
+
+      vim.keymap.set(
+        'n',
+        'gI',
+        '<cmd>FzfLua lsp_implementations jump1=true silent=true ignore_current_line=true<cr>',
+        { desc = 'Goto Implementation' }
+      )
+
+      vim.keymap.set(
+        'n',
+        'gy',
+        '<cmd>FzfLua lsp_typedefs        jump1=true silent=true ignore_current_line=true<cr>',
+        { desc = 'Goto Type Definitions' }
+      )
     end,
   },
 }
