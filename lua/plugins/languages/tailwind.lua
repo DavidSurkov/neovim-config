@@ -14,12 +14,7 @@ return {
       },
       setup = {
         tailwindcss = function(_, opts)
-          local tw = nil
-          local ok, ret = pcall(require, 'lspconfig.configs.tailwindcss')
-          if ok then
-            tw = ret
-          end
-          tw = require 'lspconfig.server_configurations.tailwindcss'
+          local tw = require 'lspconfig.server_configurations.tailwindcss'
 
           opts.filetypes = opts.filetypes or {}
 
@@ -33,7 +28,7 @@ return {
           end, opts.filetypes)
 
           -- Additional settings for Phoenix projects
-          opts.settings = {
+          opts.settings = vim.tbl_deep_extend('force', opts.settings or {}, {
             tailwindCSS = {
               includeLanguages = {
                 elixir = 'html-eex',
@@ -41,7 +36,7 @@ return {
                 heex = 'html-eex',
               },
             },
-          }
+          })
 
           -- Add additional filetypes
           vim.list_extend(opts.filetypes, opts.filetypes_include or {})

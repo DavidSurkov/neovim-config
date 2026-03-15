@@ -277,7 +277,6 @@ return {
         -- 'phpcs',
         -- 'pint',
         'prettier',
-        'prettierd',
         'pyright',
         -- 'ruff',
         'stylua',

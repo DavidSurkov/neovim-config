@@ -17,7 +17,7 @@ return {
           root_dir = function(fname)
             local util = require 'lspconfig.util'
             local root = util.root_pattern('pnpm-workspace.yaml', 'package.json', 'tsconfig.json', '.git')(fname)
-            if not root and root:find('/node_modules', 1, true) then
+            if root and root:find('/node_modules', 1, true) then
               return nil
             end
             return root

@@ -16,11 +16,6 @@ local supported = {
 }
 
 return {
-  {
-    'williamboman/mason.nvim',
-    opts = { ensure_installed = { 'prettier' } },
-  },
-
   -- conform
   {
     'stevearc/conform.nvim',
@@ -30,7 +25,6 @@ return {
       for _, ft in ipairs(supported) do
         opts.formatters_by_ft[ft] = opts.formatters_by_ft[ft] or {}
         table.insert(opts.formatters_by_ft[ft], 'prettier')
-        table.insert(opts.formatters_by_ft[ft], 'prettierd')
       end
 
       opts.format_after_save = function(bufnr)
@@ -48,17 +42,6 @@ return {
         -- Fallback to default LSP formatting
         return { lsp_format = 'fallback' }
       end
-    end,
-  },
-
-  -- none-ls support
-  {
-    'nvimtools/none-ls.nvim',
-    optional = true,
-    opts = function(_, opts)
-      local nls = require 'null-ls'
-      opts.sources = opts.sources or {}
-      table.insert(opts.sources, nls.builtins.formatting.prettier)
     end,
   },
 }
