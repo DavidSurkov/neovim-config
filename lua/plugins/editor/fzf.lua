@@ -131,7 +131,7 @@ return {
         '<cmd>FzfLua buffers sort_mru=true sort_lastused=true<cr>',
         desc = 'Buffers',
       },
-      { '<leader>ff', '<cmd>FzfLua files<cr>', desc = 'Files' },
+      -- { '<leader>ff', '<cmd>FzfLua files<cr>', desc = 'Files' },
       { '<leader><space>', '<cmd>FzfLua files<cr>', desc = 'Find Files' },
       { '<leader>fg', '<cmd>FzfLua git_files<cr>', desc = 'Git-files' },
 

@@ -5,21 +5,23 @@ return {
       servers = {
         tailwindcss = {
           -- exclude a filetype from the default_config
-          filetypes_exclude = { 'markdown' },
+          filetypes_exclude = {},
           -- add additional filetypes to the default_config
-          filetypes_include = {},
+          filetypes_include = { 'javascript', 'typescript' },
           -- to fully override the default_config, change the below
-          -- filetypes = {}
+          filetypes = { 'javascriptreact', 'typescriptreact', 'html', 'css', 'scss', 'sass' },
         },
       },
       setup = {
         tailwindcss = function(_, opts)
           local tw = require 'lspconfig.server_configurations.tailwindcss'
 
-          opts.filetypes = opts.filetypes or {}
+          opts.filetypes = vim.deepcopy(opts.filetypes or {})
 
-          -- Add default filetypes
-          vim.list_extend(opts.filetypes, tw.default_config.filetypes)
+          -- Treat an explicit filetypes list as an override.
+          if #opts.filetypes == 0 then
+            vim.list_extend(opts.filetypes, tw.default_config.filetypes)
+          end
 
           -- Remove excluded filetypes
           --- @param ft string
@@ -40,6 +42,7 @@ return {
 
           -- Add additional filetypes
           vim.list_extend(opts.filetypes, opts.filetypes_include or {})
+          opts.filetypes = vim.fn.uniq(opts.filetypes)
         end,
       },
     },

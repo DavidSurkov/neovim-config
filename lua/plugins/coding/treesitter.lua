@@ -48,6 +48,25 @@ return {
       },
       indent = { enable = true, disable = { 'ruby' } },
     },
+    config = function(_, opts)
+      -- Neovim 0.12 + older nvim-treesitter queries can pass quantified captures
+      -- as tables. get_node_text expects a TSNode and crashes on table input.
+      if not vim.g.ts_get_node_text_capture_list_patch then
+        local original_get_node_text = vim.treesitter.get_node_text
+        vim.treesitter.get_node_text = function(node, source, ts_opts)
+          if type(node) == 'table' then
+            local first = node[1]
+            if type(first) == 'userdata' then
+              node = first
+            end
+          end
+          return original_get_node_text(node, source, ts_opts)
+        end
+        vim.g.ts_get_node_text_capture_list_patch = true
+      end
+
+      require('nvim-treesitter.configs').setup(opts)
+    end,
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
     --

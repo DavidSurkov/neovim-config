@@ -67,19 +67,35 @@ return {
           --
           -- In this case, we create a function that lets us more easily define mappings specific
           -- for LSP related items. It sets the mode, buffer and description for us each time.
+          local bufnr = event.buf
           local map = function(keys, func, desc, mode)
             mode = mode or 'n'
-            vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = desc })
+            vim.keymap.set(mode, keys, func, { buffer = bufnr, desc = desc })
+          end
+          local function apply_code_action(kind)
+            vim.lsp.buf.code_action {
+              apply = true,
+              context = {
+                only = { kind },
+                diagnostics = vim.diagnostic.get(bufnr),
+              },
+              filter = function(action)
+                return action.kind == kind or vim.startswith(action.kind or '', kind .. '.')
+              end,
+            }
           end
 
-          -- Execute a code action, usually your cursor needs to be on top of an error
-          -- or a suggestion from your LSP for this to activate.
-          map('<leader>ca', vim.lsp.buf.code_action, 'Code Action', { 'n', 'x' })
-          map('<leader>cr', vim.lsp.buf.rename, 'LSP Rename', { 'n', 'x' })
+          if not vim.b[bufnr].lsp_base_keymaps_set then
+            -- Execute a code action, usually your cursor needs to be on top of an error
+            -- or a suggestion from your LSP for this to activate.
+            map('<leader>ca', require('fzf-lua').lsp_code_actions, 'Code Action', { 'n', 'x' })
+            map('<leader>cr', vim.lsp.buf.rename, 'LSP Rename', { 'n', 'x' })
 
-          -- WARN: This is not Goto Definition, this is Goto Declaration.
-          --  For example, in C this would take you to the header.
-          map('gD', vim.lsp.buf.declaration, 'Goto Declaration')
+            -- WARN: This is not Goto Definition, this is Goto Declaration.
+            --  For example, in C this would take you to the header.
+            map('gD', vim.lsp.buf.declaration, 'Goto Declaration')
+            vim.b[bufnr].lsp_base_keymaps_set = true
+          end
 
           -- The following two autocommands are used to highlight references of the
           -- word under your cursor when your cursor rests there for a little while.
@@ -101,12 +117,51 @@ return {
               local bufnr = event.buf
               if vim.lsp.buf_is_attached(bufnr, client.id) then
                 vim.lsp.buf_detach_client(bufnr, client.id)
-                vim.notify('ESLint disabled for current buffer')
+                vim.notify 'ESLint disabled for current buffer'
               else
                 vim.lsp.buf_attach_client(bufnr, client.id)
-                vim.notify('ESLint enabled for current buffer')
+                vim.notify 'ESLint enabled for current buffer'
               end
             end, 'Toggle ESLint (Buffer)')
+          end
+          if client and client.name == 'vtsls' and not vim.b[bufnr].vtsls_keymaps_set then
+            map('gD', function()
+              local position_params = vim.lsp.util.make_position_params()
+              local params = {
+                command = 'typescript.goToSourceDefinition',
+                arguments = { position_params.textDocument.uri, position_params.position },
+              }
+              require('trouble').open {
+                mode = 'lsp_command',
+                params = params,
+              }
+            end, 'Goto Source Definition')
+            map('gR', function()
+              local params = {
+                command = 'typescript.findAllFileReferences',
+                arguments = { vim.uri_from_bufnr(event.buf) },
+              }
+              require('trouble').open {
+                mode = 'lsp_command',
+                params = params,
+              }
+            end, 'File References')
+            map('<leader>co', function()
+              apply_code_action 'source.organizeImports'
+            end, 'Organize Imports')
+            map('<leader>cM', function()
+              apply_code_action 'source.addMissingImports.ts'
+            end, 'Add Missing Imports')
+            map('<leader>cu', function()
+              apply_code_action 'source.removeUnusedImports'
+            end, 'Remove Unused Imports')
+            map('<leader>cD', function()
+              apply_code_action 'source.fixAll.ts'
+            end, 'Fix All Diagnostics')
+            map('<leader>cV', function()
+              vim.notify('TypeScript version selection is not wired into this Neovim config', vim.log.levels.WARN)
+            end, 'Select TS Workspace Version')
+            vim.b[bufnr].vtsls_keymaps_set = true
           end
           -- if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
           --   local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
@@ -138,10 +193,16 @@ return {
           -- code, if the language server you are using supports them
           --
           -- This may be unwanted, since they displace some of your code
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
+          if
+            client
+            and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint)
+            and not vim.b[bufnr].inlay_hint_toggle_set
+          then
             map('<leader>th', function()
-              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
+              local enabled = vim.lsp.inlay_hint.is_enabled { bufnr = bufnr }
+              vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
             end, 'Toggle Inlay Hints')
+            vim.b[bufnr].inlay_hint_toggle_set = true
           end
         end,
       })
@@ -194,6 +255,104 @@ return {
             client.server_capabilities.documentRangeFormattingProvider = false
           end,
         },
+        vtsls = {
+          root_dir = function(fname)
+            local util = require 'lspconfig.util'
+            local root = util.root_pattern('pnpm-workspace.yaml', 'package.json', 'tsconfig.json', '.git')(fname)
+            if root and root:find('/node_modules', 1, true) then
+              return nil
+            end
+            return root
+          end,
+          filetypes = {
+            'javascript',
+            'javascriptreact',
+            'javascript.jsx',
+            'typescript',
+            'typescriptreact',
+            'typescript.tsx',
+          },
+          settings = {
+            complete_function_calls = true,
+            vtsls = {
+              enableMoveToFileCodeAction = true,
+              autoUseWorkspaceTsdk = true,
+              experimental = {
+                maxInlayHintLength = 30,
+                completion = {
+                  enableServerSideFuzzyMatch = true,
+                },
+              },
+            },
+            typescript = {
+              updateImportsOnFileMove = { enabled = 'always' },
+              suggest = {
+                completeFunctionCalls = true,
+              },
+              inlayHints = {
+                enumMemberValues = { enabled = true },
+                functionLikeReturnTypes = { enabled = true },
+                parameterNames = { enabled = 'all' },
+                parameterTypes = { enabled = true },
+                propertyDeclarationTypes = { enabled = true },
+                variableTypes = { enabled = true },
+              },
+            },
+          },
+          on_attach = function(client, _)
+            -- Work around intermittent tsserver 5.9.x foldingRange crashes ("length < 0").
+            client.server_capabilities.foldingRangeProvider = false
+
+            client.commands['_typescript.moveToFileRefactoring'] = function(command, _)
+              local action, uri, range = unpack(command.arguments)
+
+              local function move(newf)
+                client.request('workspace/executeCommand', {
+                  command = command.command,
+                  arguments = { action, uri, range, newf },
+                })
+              end
+
+              local fname = vim.uri_to_fname(uri)
+              client.request('workspace/executeCommand', {
+                command = 'typescript.tsserverRequest',
+                arguments = {
+                  'getMoveToRefactoringFileSuggestions',
+                  {
+                    file = fname,
+                    startLine = range.start.line + 1,
+                    startOffset = range.start.character + 1,
+                    endLine = range['end'].line + 1,
+                    endOffset = range['end'].character + 1,
+                  },
+                },
+              }, function(_, result)
+                local files = result.body.files
+                table.insert(files, 1, 'Enter new path...')
+                vim.ui.select(files, {
+                  prompt = 'Select move destination:',
+                  format_item = function(f)
+                    return vim.fn.fnamemodify(f, ':~:.')
+                  end,
+                }, function(f)
+                  if f and f:find '^Enter new path' then
+                    vim.ui.input({
+                      prompt = 'Enter move destination:',
+                      default = vim.fn.fnamemodify(fname, ':h') .. '/',
+                      completion = 'file',
+                    }, function(newf)
+                      if newf then
+                        move(newf)
+                      end
+                    end)
+                  elseif f then
+                    move(f)
+                  end
+                end)
+              end)
+            end
+          end,
+        },
         rust_analyzer = {
           settings = {
             ['rust-analyzer'] = {
@@ -243,6 +402,9 @@ return {
           },
         },
       }
+      -- apply same settings for js as ts
+      servers.vtsls.settings.javascript =
+        vim.tbl_deep_extend('force', {}, servers.vtsls.settings.typescript, servers.vtsls.settings.javascript or {})
 
       -- Ensure the servers and tools above are installed
       --
