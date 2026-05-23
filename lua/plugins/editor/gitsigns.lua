@@ -80,9 +80,9 @@ return {
         -- Toggles
         map(
           'n',
-          '<leader>gbl',
+          '<leader>gbt',
           gitsigns.toggle_current_line_blame,
-          { desc = 'Blame Line' }
+          { desc = 'Blame Toggle' }
         )
         map(
           'n',
