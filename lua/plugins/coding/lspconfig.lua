@@ -30,6 +30,25 @@ return {
       'hrsh7th/cmp-nvim-lsp',
     },
     config = function()
+      if not vim.g.vtsls_inlay_hint_padding_patch then
+        local method = vim.lsp.protocol.Methods.textDocument_inlayHint
+        local default_handler = vim.lsp.handlers[method]
+
+        vim.lsp.handlers[method] = function(err, result, ctx, config)
+          local client = vim.lsp.get_client_by_id(ctx.client_id)
+          if client and client.name == 'vtsls' and type(result) == 'table' then
+            for _, hint in ipairs(result) do
+              if hint.kind == 1 then
+                hint.paddingLeft = false
+              end
+            end
+          end
+
+          return default_handler(err, result, ctx, config)
+        end
+        vim.g.vtsls_inlay_hint_padding_patch = true
+      end
+
       -- Brief aside: **What is LSP?**
       --
       -- LSP is an initialism you've probably heard, but might not understand what it is.
@@ -84,12 +103,34 @@ return {
               end,
             }
           end
+          local function is_enabled_code_action(action)
+            return not action.disabled
+          end
 
           if not vim.b[bufnr].lsp_base_keymaps_set then
             -- Execute a code action, usually your cursor needs to be on top of an error
             -- or a suggestion from your LSP for this to activate.
-            map('<leader>ca', require('fzf-lua').lsp_code_actions, 'Code Action', { 'n', 'x' })
+            map('<leader>ca', function()
+              require('fzf-lua').lsp_code_actions {
+                filter = is_enabled_code_action,
+              }
+            end, 'Code Action', { 'n', 'x' })
             map('<leader>cr', vim.lsp.buf.rename, 'LSP Rename', { 'n', 'x' })
+            map('<leader>th', function()
+              local method = vim.lsp.protocol.Methods.textDocument_inlayHint
+              local supported = vim.iter(vim.lsp.get_clients { bufnr = bufnr }):any(function(attached_client)
+                return attached_client:supports_method(method, bufnr)
+              end)
+
+              if not supported then
+                vim.notify('No attached LSP supports inlay hints for this buffer', vim.log.levels.WARN)
+                return
+              end
+
+              local enabled = vim.lsp.inlay_hint.is_enabled { bufnr = bufnr }
+              vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
+              vim.notify('Inlay hints ' .. (enabled and 'disabled' or 'enabled'))
+            end, 'Toggle Inlay Hints')
 
             -- WARN: This is not Goto Definition, this is Goto Declaration.
             --  For example, in C this would take you to the header.
@@ -189,21 +230,6 @@ return {
           --   })
           -- end
 
-          -- The following code creates a keymap to toggle inlay hints in your
-          -- code, if the language server you are using supports them
-          --
-          -- This may be unwanted, since they displace some of your code
-          if
-            client
-            and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint)
-            and not vim.b[bufnr].inlay_hint_toggle_set
-          then
-            map('<leader>th', function()
-              local enabled = vim.lsp.inlay_hint.is_enabled { bufnr = bufnr }
-              vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
-            end, 'Toggle Inlay Hints')
-            vim.b[bufnr].inlay_hint_toggle_set = true
-          end
         end,
       })
 
@@ -256,13 +282,14 @@ return {
           end,
         },
         vtsls = {
-          root_dir = function(fname)
+          root_dir = function(bufnr, on_dir)
             local util = require 'lspconfig.util'
+            local fname = vim.api.nvim_buf_get_name(bufnr)
             local root = util.root_pattern('pnpm-workspace.yaml', 'package.json', 'tsconfig.json', '.git')(fname)
             if root and root:find('/node_modules', 1, true) then
-              return nil
+              return
             end
-            return root
+            on_dir(root)
           end,
           filetypes = {
             'javascript',
@@ -285,6 +312,20 @@ return {
               },
             },
             typescript = {
+              updateImportsOnFileMove = { enabled = 'always' },
+              suggest = {
+                completeFunctionCalls = true,
+              },
+              inlayHints = {
+                enumMemberValues = { enabled = true },
+                functionLikeReturnTypes = { enabled = true },
+                parameterNames = { enabled = 'all' },
+                parameterTypes = { enabled = true },
+                propertyDeclarationTypes = { enabled = true },
+                variableTypes = { enabled = true },
+              },
+            },
+            javascript = {
               updateImportsOnFileMove = { enabled = 'always' },
               suggest = {
                 completeFunctionCalls = true,
@@ -450,17 +491,15 @@ return {
       }
 
       require('mason-lspconfig').setup {
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
+        automatic_enable = false,
       }
+
+      for server_name, server in pairs(servers) do
+        -- mason-lspconfig v2 removed handlers; configure servers directly.
+        server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+        vim.lsp.config(server_name, server)
+        vim.lsp.enable(server_name)
+      end
     end,
   },
 }
