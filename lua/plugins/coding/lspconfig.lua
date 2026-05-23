@@ -155,7 +155,7 @@ return {
             map('<leader>cu', function()
               apply_code_action 'source.removeUnusedImports'
             end, 'Remove Unused Imports')
-            map('<leader>cD', function()
+            map('<leader>cF', function()
               apply_code_action 'source.fixAll.ts'
             end, 'Fix All Diagnostics')
             map('<leader>cV', function()
@@ -195,7 +195,7 @@ return {
           -- This may be unwanted, since they displace some of your code
           if
             client
-            and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint)
+            and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint)
             and not vim.b[bufnr].inlay_hint_toggle_set
           then
             map('<leader>th', function()
