@@ -70,6 +70,14 @@ local function project_search_dirs()
   return dirs
 end
 
+local function prompt_grep_dir(default_dir)
+  vim.ui.input({ prompt = 'Dir> ', default = default_dir }, function(input)
+    if input and input ~= '' then
+      require('fzf-lua').live_grep_native { cwd = input }
+    end
+  end)
+end
+
 local function select_search_dir()
   -- If there is a list of preconfigured project dirs(like ones you can configure in webshtore ide)
   -- then display them in a list and let use to pick one of them
@@ -96,12 +104,13 @@ local function select_search_dir()
     end, 10)
     return
   end
-  -- Otherwise show promts that starts from cwd
-  vim.ui.input({ prompt = 'Dir> ', default = vim.fn.getcwd() }, function(input)
-    if input and input ~= '' then
-      require('fzf-lua').live_grep_native { cwd = input }
-    end
-  end)
+  -- Otherwise show prompt that starts from cwd
+  prompt_grep_dir(vim.fn.getcwd())
+end
+
+local function prompt_grep_dir_from_buffer()
+  local buffer_dir = vim.fn.expand('%:p:h')
+  prompt_grep_dir(buffer_dir ~= '' and buffer_dir or vim.fn.getcwd())
 end
 
 return {
@@ -159,6 +168,11 @@ return {
         '<leader>sg',
         select_search_dir,
         desc = 'Grep (choose dir)',
+      },
+      {
+        '<leader>sG',
+        prompt_grep_dir_from_buffer,
+        desc = 'Grep (from buffer dir)',
       },
 
       { '<leader>sh', '<cmd>FzfLua help_tags<cr>', desc = 'Help Pages' },
