@@ -1,18 +1,6 @@
 -- LSP Plugins
 return {
   {
-    -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
-    -- used for completion, annotations and signatures of Neovim apis
-    'folke/lazydev.nvim',
-    ft = 'lua',
-    opts = {
-      library = {
-        -- Load luvit types when the `vim.uv` word is found
-        { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
-      },
-    },
-  },
-  {
     -- Main LSP Configuration
     'neovim/nvim-lspconfig',
     dependencies = {
@@ -29,25 +17,24 @@ return {
       -- Allows extra capabilities provided by nvim-cmp
       'hrsh7th/cmp-nvim-lsp',
     },
-    config = function()
-      if not vim.g.vtsls_inlay_hint_padding_patch then
-        local method = vim.lsp.protocol.Methods.textDocument_inlayHint
-        local default_handler = vim.lsp.handlers[method]
-
-        vim.lsp.handlers[method] = function(err, result, ctx, config)
-          local client = vim.lsp.get_client_by_id(ctx.client_id)
-          if client and client.name == 'vtsls' and type(result) == 'table' then
-            for _, hint in ipairs(result) do
-              if hint.kind == 1 then
-                hint.paddingLeft = false
-              end
-            end
-          end
-
-          return default_handler(err, result, ctx, config)
-        end
-        vim.g.vtsls_inlay_hint_padding_patch = true
-      end
+    opts = {
+      servers = {},
+      setup = {},
+      tools = {
+        -- General tools that do not have a dedicated language module yet.
+        biome = true,
+        ['css-lsp'] = true,
+        hadolint = true,
+        ['js-debug-adapter'] = true,
+        neocmakelsp = true,
+        prettier = true,
+        pyright = true,
+        stylua = true,
+      },
+    },
+    config = function(_, opts)
+      opts = opts or {}
+      local servers = opts.servers or {}
 
       -- Brief aside: **What is LSP?**
       --
@@ -229,7 +216,6 @@ return {
           --     end,
           --   })
           -- end
-
         end,
       })
 
@@ -256,197 +242,6 @@ return {
       --   lineFoldingOnly = true,
       -- }
 
-      -- Enable the following language servers
-      --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
-      --
-      --  Add any additional override configuration in the following tables. Available keys are:
-      --  - cmd (table): Override the default command used to start the server
-      --  - filetypes (table): Override the default list of associated filetypes for the server
-      --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
-      --  - settings (table): Override the default settings passed when initializing the server.
-      --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
-      local servers = {
-        -- clangd = {},
-        -- gopls = {},
-        -- pyright = {},
-        eslint = {
-          settings = {
-            workingDirectory = {
-              mode = 'auto',
-            },
-          },
-          on_attach = function(client)
-            -- Keep Prettier as the formatter for JS/TS.
-            client.server_capabilities.documentFormattingProvider = false
-            client.server_capabilities.documentRangeFormattingProvider = false
-          end,
-        },
-        vtsls = {
-          root_dir = function(bufnr, on_dir)
-            local util = require 'lspconfig.util'
-            local fname = vim.api.nvim_buf_get_name(bufnr)
-            local root = util.root_pattern('pnpm-workspace.yaml', 'package.json', 'tsconfig.json', '.git')(fname)
-            if root and root:find('/node_modules', 1, true) then
-              return
-            end
-            on_dir(root)
-          end,
-          filetypes = {
-            'javascript',
-            'javascriptreact',
-            'javascript.jsx',
-            'typescript',
-            'typescriptreact',
-            'typescript.tsx',
-          },
-          settings = {
-            complete_function_calls = true,
-            vtsls = {
-              enableMoveToFileCodeAction = true,
-              autoUseWorkspaceTsdk = true,
-              experimental = {
-                maxInlayHintLength = 30,
-                completion = {
-                  enableServerSideFuzzyMatch = true,
-                },
-              },
-            },
-            typescript = {
-              updateImportsOnFileMove = { enabled = 'always' },
-              suggest = {
-                completeFunctionCalls = true,
-              },
-              inlayHints = {
-                enumMemberValues = { enabled = true },
-                functionLikeReturnTypes = { enabled = true },
-                parameterNames = { enabled = 'all' },
-                parameterTypes = { enabled = true },
-                propertyDeclarationTypes = { enabled = true },
-                variableTypes = { enabled = true },
-              },
-            },
-            javascript = {
-              updateImportsOnFileMove = { enabled = 'always' },
-              suggest = {
-                completeFunctionCalls = true,
-              },
-              inlayHints = {
-                enumMemberValues = { enabled = true },
-                functionLikeReturnTypes = { enabled = true },
-                parameterNames = { enabled = 'all' },
-                parameterTypes = { enabled = true },
-                propertyDeclarationTypes = { enabled = true },
-                variableTypes = { enabled = true },
-              },
-            },
-          },
-          on_attach = function(client, _)
-            -- Work around intermittent tsserver 5.9.x foldingRange crashes ("length < 0").
-            client.server_capabilities.foldingRangeProvider = false
-
-            client.commands['_typescript.moveToFileRefactoring'] = function(command, _)
-              local action, uri, range = unpack(command.arguments)
-
-              local function move(newf)
-                client.request('workspace/executeCommand', {
-                  command = command.command,
-                  arguments = { action, uri, range, newf },
-                })
-              end
-
-              local fname = vim.uri_to_fname(uri)
-              client.request('workspace/executeCommand', {
-                command = 'typescript.tsserverRequest',
-                arguments = {
-                  'getMoveToRefactoringFileSuggestions',
-                  {
-                    file = fname,
-                    startLine = range.start.line + 1,
-                    startOffset = range.start.character + 1,
-                    endLine = range['end'].line + 1,
-                    endOffset = range['end'].character + 1,
-                  },
-                },
-              }, function(_, result)
-                local files = result.body.files
-                table.insert(files, 1, 'Enter new path...')
-                vim.ui.select(files, {
-                  prompt = 'Select move destination:',
-                  format_item = function(f)
-                    return vim.fn.fnamemodify(f, ':~:.')
-                  end,
-                }, function(f)
-                  if f and f:find '^Enter new path' then
-                    vim.ui.input({
-                      prompt = 'Enter move destination:',
-                      default = vim.fn.fnamemodify(fname, ':h') .. '/',
-                      completion = 'file',
-                    }, function(newf)
-                      if newf then
-                        move(newf)
-                      end
-                    end)
-                  elseif f then
-                    move(f)
-                  end
-                end)
-              end)
-            end
-          end,
-        },
-        rust_analyzer = {
-          settings = {
-            ['rust-analyzer'] = {
-              cargo = {
-                allFeatures = true,
-                loadOutDirsFromCheck = true,
-                runBuildScripts = true,
-              },
-              check = {
-                command = 'clippy',
-              },
-              procMacro = {
-                enable = true,
-              },
-              inlayHints = {
-                bindingModeHints = { enable = true },
-                closingBraceHints = { enable = true },
-                closureCaptureHints = { enable = true },
-                closureReturnTypeHints = { enable = 'always' },
-                lifetimeElisionHints = { enable = 'always', useParameterNames = true },
-                typeHints = { enable = true },
-              },
-            },
-          },
-        },
-        -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
-        --
-        -- Some languages (like typescript) have entire language plugins that can be useful:
-        --    https://github.com/pmizio/typescript-tools.nvim
-        --
-        -- But for many setups, the LSP (`ts_ls`) will work just fine
-        -- ts_ls = {},
-        --
-
-        lua_ls = {
-          -- cmd = { ... },
-          -- filetypes = { ... },
-          -- capabilities = {},
-          settings = {
-            Lua = {
-              completion = {
-                callSnippet = 'Replace',
-              },
-              -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
-              -- diagnostics = { disable = { 'missing-fields' } },
-            },
-          },
-        },
-      }
-      -- apply same settings for js as ts
-      servers.vtsls.settings.javascript =
-        vim.tbl_deep_extend('force', {}, servers.vtsls.settings.typescript, servers.vtsls.settings.javascript or {})
-
       -- Ensure the servers and tools above are installed
       --
       -- To check the current status of installed tools and/or manually install
@@ -460,34 +255,19 @@ return {
       --
       -- You can add other tools here that you want Mason to install
       -- for you, so that they are available from within Neovim.
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        -- 'astro-language-server',
-        'biome',
-        'css-lsp',
-        -- 'debugpy',
-        -- 'delve',
-        'docker-compose-language-service',
-        'dockerfile-language-server',
-        'eslint-lsp',
-        'hadolint',
-        -- 'intelephense',
-        'js-debug-adapter',
-        'lua-language-server',
-        'neocmakelsp',
-        -- 'php-cs-fixer',
-        -- 'php-debug-adapter',
-        -- 'phpcs',
-        -- 'pint',
-        'prettier',
-        'pyright',
-        -- 'ruff',
-        'stylua',
-        'tailwindcss-language-server',
-        'vtsls',
-      })
+      local ensure_installed = {}
+      for _, tool in ipairs(vim.tbl_keys(servers)) do
+        ensure_installed[tool] = true
+      end
+      for _, tool in ipairs(vim.tbl_keys(opts.tools or {})) do
+        ensure_installed[tool] = true
+      end
+      for _, tool in ipairs(opts.ensure_installed or {}) do
+        ensure_installed[tool] = true
+      end
+
       require('mason-tool-installer').setup {
-        ensure_installed = ensure_installed,
+        ensure_installed = vim.tbl_keys(ensure_installed),
       }
 
       require('mason-lspconfig').setup {
@@ -496,6 +276,11 @@ return {
 
       for server_name, server in pairs(servers) do
         -- mason-lspconfig v2 removed handlers; configure servers directly.
+        local setup = opts.setup and opts.setup[server_name]
+        if setup then
+          setup(server_name, server)
+        end
+
         server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
         vim.lsp.config(server_name, server)
         vim.lsp.enable(server_name)

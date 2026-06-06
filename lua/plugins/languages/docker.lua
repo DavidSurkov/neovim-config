@@ -10,6 +10,10 @@ return {
         dockerls = {},
         docker_compose_language_service = {},
       },
+      tools = {
+        ['docker-compose-language-service'] = true,
+        ['dockerfile-language-server'] = true,
+      },
     },
   },
 }

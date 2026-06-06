@@ -12,15 +12,17 @@ return {
           filetypes = { 'javascriptreact', 'typescriptreact', 'html', 'css', 'scss', 'sass' },
         },
       },
+      tools = {
+        ['tailwindcss-language-server'] = true,
+      },
       setup = {
         tailwindcss = function(_, opts)
-          local tw = require 'lspconfig.server_configurations.tailwindcss'
-
           opts.filetypes = vim.deepcopy(opts.filetypes or {})
 
           -- Treat an explicit filetypes list as an override.
           if #opts.filetypes == 0 then
-            vim.list_extend(opts.filetypes, tw.default_config.filetypes)
+            local default_config = vim.lsp.config.tailwindcss or {}
+            vim.list_extend(opts.filetypes, default_config.filetypes or {})
           end
 
           -- Remove excluded filetypes
