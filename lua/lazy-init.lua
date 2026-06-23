@@ -19,7 +19,10 @@ require('lazy').setup({
     { import = 'plugins.editor.fzf' },
     { import = 'plugins.editor.gitsigns' },
     { import = 'plugins.editor.mini' },
-    { import = 'plugins.editor.neo-tree' },
+
+    -- maybe it will switch to it if I don't like mini.files
+    -- { import = 'plugins.editor.neo-tree' },
+
     { import = 'plugins.editor.overseer' },
     { import = 'plugins.editor.snacks' },
     { import = 'plugins.editor.ufo' },
