@@ -1,3 +1,39 @@
+local function select_server(server)
+  return function(bufnr, on_dir)
+    local util = require 'lspconfig.util'
+    local fname = vim.api.nvim_buf_get_name(bufnr)
+    local root = util.root_pattern('pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lock', 'bun.lockb', '.git')(
+      fname
+    ) or util.root_pattern('package.json', 'tsconfig.json')(fname)
+    if not root then
+      return
+    end
+
+    local package_path = vim.fs.joinpath(root, 'node_modules', 'typescript', 'package.json')
+    local ok, package = pcall(function()
+      return vim.json.decode(table.concat(vim.fn.readfile(package_path), '\n'))
+    end)
+    local major = ok
+        and type(package) == 'table'
+        and type(package.version) == 'string'
+        and tonumber(package.version:match '^%d+')
+      or nil
+    local use_tsgo = major == nil or major >= 7
+    if (server == 'tsgo') == use_tsgo then
+      on_dir(root)
+    end
+  end
+end
+
+local inlay_hints = {
+  enumMemberValues = { enabled = true },
+  functionLikeReturnTypes = { enabled = true },
+  parameterNames = { enabled = 'all' },
+  parameterTypes = { enabled = true },
+  propertyDeclarationTypes = { enabled = true },
+  variableTypes = { enabled = true },
+}
+
 return {
   {
     'neovim/nvim-lspconfig',
@@ -15,136 +51,42 @@ return {
             client.server_capabilities.documentRangeFormattingProvider = false
           end,
         },
-        vtsls = {
-          root_dir = function(bufnr, on_dir)
-            local util = require 'lspconfig.util'
-            local fname = vim.api.nvim_buf_get_name(bufnr)
-            local root = util.root_pattern('pnpm-workspace.yaml', 'package.json', 'tsconfig.json', '.git')(fname)
-            if root and root:find('/node_modules', 1, true) then
-              return
-            end
-            on_dir(root)
+        tsgo = {
+          root_dir = select_server 'tsgo',
+          cmd = function(dispatchers, config)
+            local tsc = vim.fs.joinpath(config.root_dir, 'node_modules', '.bin', 'tsc')
+            local cmd = vim.fn.executable(tsc) == 1 and tsc or 'tsgo'
+            return vim.lsp.rpc.start({ cmd, '--lsp', '--stdio' }, dispatchers)
           end,
-          filetypes = {
-            'javascript',
-            'javascriptreact',
-            'javascript.jsx',
-            'typescript',
-            'typescriptreact',
-            'typescript.tsx',
-          },
           settings = {
-            complete_function_calls = true,
+            typescript = {
+              inlayHints = inlay_hints,
+            },
+          },
+        },
+        vtsls = {
+          root_dir = select_server 'vtsls',
+          settings = {
             vtsls = {
-              enableMoveToFileCodeAction = true,
               autoUseWorkspaceTsdk = true,
-              experimental = {
-                maxInlayHintLength = 30,
-                completion = {
-                  enableServerSideFuzzyMatch = true,
-                },
-              },
             },
             typescript = {
-              updateImportsOnFileMove = { enabled = 'always' },
-              suggest = {
-                completeFunctionCalls = true,
-              },
-              inlayHints = {
-                enumMemberValues = { enabled = true },
-                functionLikeReturnTypes = { enabled = true },
-                parameterNames = { enabled = 'all' },
-                parameterTypes = { enabled = true },
-                propertyDeclarationTypes = { enabled = true },
-                variableTypes = { enabled = true },
-              },
+              inlayHints = inlay_hints,
             },
-            javascript = {},
+            javascript = {
+              inlayHints = inlay_hints,
+            },
           },
-          on_attach = function(client, _)
-            -- Work around intermittent tsserver 5.9.x foldingRange crashes ("length < 0").
-            client.server_capabilities.foldingRangeProvider = false
-
-            client.commands['_typescript.moveToFileRefactoring'] = function(command, _)
-              local action, uri, range = unpack(command.arguments)
-
-              local function move(newf)
-                client.request('workspace/executeCommand', {
-                  command = command.command,
-                  arguments = { action, uri, range, newf },
-                })
-              end
-
-              local fname = vim.uri_to_fname(uri)
-              client.request('workspace/executeCommand', {
-                command = 'typescript.tsserverRequest',
-                arguments = {
-                  'getMoveToRefactoringFileSuggestions',
-                  {
-                    file = fname,
-                    startLine = range.start.line + 1,
-                    startOffset = range.start.character + 1,
-                    endLine = range['end'].line + 1,
-                    endOffset = range['end'].character + 1,
-                  },
-                },
-              }, function(_, result)
-                local files = result.body.files
-                table.insert(files, 1, 'Enter new path...')
-                vim.ui.select(files, {
-                  prompt = 'Select move destination:',
-                  format_item = function(f)
-                    return vim.fn.fnamemodify(f, ':~:.')
-                  end,
-                }, function(f)
-                  if f and f:find '^Enter new path' then
-                    vim.ui.input({
-                      prompt = 'Enter move destination:',
-                      default = vim.fn.fnamemodify(fname, ':h') .. '/',
-                      completion = 'file',
-                    }, function(newf)
-                      if newf then
-                        move(newf)
-                      end
-                    end)
-                  elseif f then
-                    move(f)
-                  end
-                end)
-              end)
-            end
+          on_attach = function(client)
+            -- Keep Prettier as the formatter for JS/TS.
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
           end,
         },
       },
-      setup = {
-        vtsls = function(_, opts)
-          opts.settings.javascript =
-            vim.tbl_deep_extend('force', {}, opts.settings.typescript, opts.settings.javascript or {})
-
-          if vim.g.vtsls_inlay_hint_padding_patch then
-            return
-          end
-
-          local method = vim.lsp.protocol.Methods.textDocument_inlayHint
-          local default_handler = vim.lsp.handlers[method]
-
-          vim.lsp.handlers[method] = function(err, result, ctx, config)
-            local client = vim.lsp.get_client_by_id(ctx.client_id)
-            if client and client.name == 'vtsls' and type(result) == 'table' then
-              for _, hint in ipairs(result) do
-                if hint.kind == 1 then
-                  hint.paddingLeft = false
-                end
-              end
-            end
-
-            return default_handler(err, result, ctx, config)
-          end
-          vim.g.vtsls_inlay_hint_padding_patch = true
-        end,
-      },
       tools = {
         ['eslint-lsp'] = true,
+        tsgo = true,
         vtsls = true,
       },
     },

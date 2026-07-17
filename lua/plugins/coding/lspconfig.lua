@@ -22,7 +22,6 @@ return {
       setup = {},
       tools = {
         -- General tools that do not have a dedicated language module yet.
-        biome = true,
         ['css-lsp'] = true,
         hadolint = true,
         ['js-debug-adapter'] = true,
@@ -152,28 +151,8 @@ return {
               end
             end, 'Toggle ESLint (Buffer)')
           end
-          if client and client.name == 'vtsls' and not vim.b[bufnr].vtsls_keymaps_set then
-            map('gD', function()
-              local position_params = vim.lsp.util.make_position_params()
-              local params = {
-                command = 'typescript.goToSourceDefinition',
-                arguments = { position_params.textDocument.uri, position_params.position },
-              }
-              require('trouble').open {
-                mode = 'lsp_command',
-                params = params,
-              }
-            end, 'Goto Source Definition')
-            map('gR', function()
-              local params = {
-                command = 'typescript.findAllFileReferences',
-                arguments = { vim.uri_from_bufnr(event.buf) },
-              }
-              require('trouble').open {
-                mode = 'lsp_command',
-                params = params,
-              }
-            end, 'File References')
+          local is_typescript = client and (client.name == 'tsgo' or client.name == 'vtsls')
+          if is_typescript and not vim.b[bufnr].typescript_keymaps_set then
             map('<leader>co', function()
               apply_code_action 'source.organizeImports'
             end, 'Organize Imports')
@@ -186,10 +165,7 @@ return {
             map('<leader>cF', function()
               apply_code_action 'source.fixAll.ts'
             end, 'Fix All Diagnostics')
-            map('<leader>cV', function()
-              vim.notify('TypeScript version selection is not wired into this Neovim config', vim.log.levels.WARN)
-            end, 'Select TS Workspace Version')
-            vim.b[bufnr].vtsls_keymaps_set = true
+            vim.b[bufnr].typescript_keymaps_set = true
           end
           -- if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
           --   local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
